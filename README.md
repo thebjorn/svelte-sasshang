@@ -1,58 +1,68 @@
-# create-svelte
+# svelte-package hangs forever
 
-Everything you need to build a Svelte library, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
+Steps to reproduce:
+```
+sv create svelte-sasshang
+cd svelte-sasshang
+pnpm up
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+```
+Add `src/lib/Foo.svelte` (note the `lang="scss"`)
+```
+<script>
+    let { foo } = $props();
+</script>
 
-## Creating a project
+<div> {foo} </div>
 
-If you're seeing this, you've probably already done this step. Congrats!
+<style lang="scss">
+    div { color: red; }
+</style>
+```
+run 
+```
+pnpm build
+```
+build gives a helpful error messag:
+```
+> Preprocessor dependency "sass-embedded" not found. Did you install it? Try `pnpm add -D sass-embedded`.
+    at loadPreprocessorPath (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/vite@6.0.3/node_modules/vite/dist/node/chunks/dep-yUJfKD1i.js:48754:13)
+    at loadSassPackage (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/vite@6.0.3/node_modules/vite/dist/node/chunks/dep-yUJfKD1i.js:48769:19)
+    at process (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/vite@6.0.3/node_modules/vite/dist/node/chunks/dep-yUJfKD1i.js:49034:27)
+    at compileCSSPreprocessors (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/vite@6.0.3/node_modules/vite/dist/node/chunks/dep-yUJfKD1i.js:48168:34)
+    at compileCSS (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/vite@6.0.3/node_modules/vite/dist/node/chunks/dep-yUJfKD1i.js:48226:38)
+    at async preprocessCSS (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/vite@6.0.3/node_modules/vite/dist/node/chunks/dep-yUJfKD1i.js:48451:10)
+    at async style (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/@sveltejs+vite-plugin-svelte@5.0.1_svelte@5.9.0_vite@6.0.3/node_modules/@sveltejs/vite-plugin-svelte/src/preprocess.js:77:31)
+    at async process_single_tag (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/svelte@5.9.0/node_modules/svelte/src/compiler/preprocess/index.js:283:21)
+    at async Promise.all (index 0)
+    at async replace_in_code (file:///C:/srv/work/svelte-sasshang/node_modules/.pnpm/svelte@5.9.0/node_modules/svelte/src/compiler/preprocess/replace_in_code.js:70:23)
+ ELIFECYCLE  Command failed with exit code 1.
+```
+add `sass-embedded`:
+```
+pnpm add -D sass-embedded
+```
+run `pnpm build` again.
+`svelte-package` hangs forever.
+```
+> svelte-sasshang@0.0.1 package
+> svelte-kit sync && svelte-package && publint
 
-```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+If bundling, conditions should include development or production. If not bundling, conditions or NODE_ENV should include development or production. See https://www.npmjs.com/package/esm-env for tips on setting conditions in popular bundlers and runtimes.
+src\lib -> dist
 ```
 
-## Developing
+The problem is that you need to change svelte.config.js:
+```diff
+import adapter from '@sveltejs/adapter-auto';
+- import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
++ import { sveltePreprocess } from 'svelte-preprocess';
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
-
-## Building
-
-To build your library:
-
-```bash
-npm run package
-```
-
-To create a production version of your showcase app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
-
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```bash
-npm publish
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+	// Consult https://svelte.dev/docs/kit/integrations
+	// for more information about preprocessors
+- 	preprocess: vitePreprocess(),
++ 	preprocess: sveltePreprocess({scss: true}),
+    ...
 ```
